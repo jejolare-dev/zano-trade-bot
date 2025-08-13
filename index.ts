@@ -74,9 +74,6 @@ async function startWithParser() {
 
     console.log(marketState, preparedConfig);
     
-
-    await new Promise(resolve => setTimeout(resolve, 10000000));
-
     async function updateConfig() {
 
         logger.detailedInfo("Destroying threads...");
