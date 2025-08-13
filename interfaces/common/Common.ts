@@ -13,8 +13,8 @@ export interface PriceInfo {
     depthToBuy: number | null;
 }
 
-export type ParserType = 'mexc';
-export const allowedParserTypes: ParserType[] = ['mexc'];
+export type ParserType = 'mexc' | 'bitcom';
+export const allowedParserTypes: ParserType[] = ['mexc', 'bitcom'];
 
 export interface ParserHandlerProps {
     type: ParserType;
@@ -28,4 +28,11 @@ export interface MarketState {
     zanoPrice: number | null;
     depthToSell: number | null;
     depthToBuy: number | null;
+}
+
+export interface Order {
+    type: 'buy' | 'sell';
+    price: string;
+    baseVolume: string;
+    baseVolumeUSD: string;
 }

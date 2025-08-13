@@ -4,6 +4,7 @@ import logger from "../../logger";
 import { ConfigItemParsed } from "../../interfaces/common/Config";
 import { MarketState, ParserHandlerProps, ParserType, PriceInfo } from "../../interfaces/common/Common";
 import mexcParser, { MexcParser } from "./mexc";
+import bitComParser, { BitComParser } from "./bit_com";
 
 export interface ParserConfig {
     fetchInterval: number;
@@ -14,7 +15,7 @@ export interface ParserConfig {
 class ParserHandler {
 
     private parserType: ParserType;
-    private targetParser: MexcParser;
+    private targetParser: MexcParser | BitComParser;
     private lastPriceInfo: PriceInfo = {
         buy: null,
         sell: null,
@@ -26,6 +27,10 @@ class ParserHandler {
         this.parserType = props.type;
         if (this.parserType === 'mexc') {
             this.targetParser = mexcParser;
+        }
+
+        if (this.parserType === 'bitcom') {
+            this.targetParser = bitComParser;
         }
 
         if (!this.targetParser) {

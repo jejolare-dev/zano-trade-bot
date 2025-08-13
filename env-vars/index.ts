@@ -34,7 +34,7 @@ function envToInt(envVar: string, envVarName: string) {
 
 function idFromPairUrl(stringUrl: string) {
     const parsedUrl = new URL(stringUrl);
-    
+
     const pairIdStr = parsedUrl.pathname.split("/").filter(e => !!e).at(-1);
 
     if (!pairIdStr || !intRegexp.test(pairIdStr)) {
@@ -55,8 +55,8 @@ if (!process.env.ZANOD_URL) {
     throw new Error("ZANOD_URL is not specified in .env file");
 }
 
-export const SIMPLEWALLET_PORT = process.env.SIMPLEWALLET_PORT 
-    ? envToInt(process.env.SIMPLEWALLET_PORT, "SIMPLEWALLET_PORT") 
+export const SIMPLEWALLET_PORT = process.env.SIMPLEWALLET_PORT
+    ? envToInt(process.env.SIMPLEWALLET_PORT, "SIMPLEWALLET_PORT")
     : undefined;
 
 export const CUSTOM_SERVER = process.env.CUSTOM_SERVER || "https://trade.zano.org";
@@ -122,14 +122,24 @@ export const PRICE_CHANGE_SENSITIVITY_PERCENT = parseFloat(process.env.PRICE_CHA
 export const DEPTH_CHANGE_SENSITIVITY_PERCENT = parseFloat(process.env.DEPTH_CHANGE_SENSITIVITY_PERCENT || "10");
 export const ACTIVITY_PING_INTERVAL = parseInt(process.env.ACTIVITY_PING_INTERVAL || "15", 10) * 1000; // in ms
 
+export const FIRST_CURRENCY = process.env.FIRST_CURRENCY as string;
+export const SECOND_CURRENCY = process.env.SECOND_CURRENCY as string;
+
+export const PAIR_AGAINST_STABLECOIN = process.env.PAIR_AGAINST_STABLECOIN === "true";
+
 if (PARSER_ENABLED) {
 
+    if (!FIRST_CURRENCY || !SECOND_CURRENCY) {
+        throw new Error("FIRST_CURRENCY and SECOND_CURRENCY must be specified in .env file");
+    }
+
+
     const requiredNumbers = [
-        PRICE_INTERVAL_SEC, 
-        PRICE_SELL_PERCENT, 
-        PRICE_BUY_PERCENT, 
+        PRICE_INTERVAL_SEC,
+        PRICE_SELL_PERCENT,
+        PRICE_BUY_PERCENT,
         PRICE_CHANGE_SENSITIVITY_PERCENT,
-        DEPTH_CHANGE_SENSITIVITY_PERCENT
+        DEPTH_CHANGE_SENSITIVITY_PERCENT,
     ];
 
     if (requiredNumbers.some(e => isNaN(e))) {

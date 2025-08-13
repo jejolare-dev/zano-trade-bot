@@ -62,13 +62,20 @@ export async function thread(configItem: ConfigItemParsed) {
 }
 
 async function startWithParser() {
-    
+
     const parserHandler = new ParserHandler({
         type: env.PARSER_TYPE
     });
 
     await parserHandler.init();
 
+    const marketState = parserHandler.getMarketState();
+    const preparedConfig = parserHandler.getConfigWithLivePrice(marketState);
+
+    console.log(marketState, preparedConfig);
+    
+
+    await new Promise(resolve => setTimeout(resolve, 10000000));
 
     async function updateConfig() {
 
@@ -82,9 +89,9 @@ async function startWithParser() {
             logger.warn(`Destroying thread ${thread.id}...`);
             destroyThread(thread.id);
         }
-        
+
         logger.info("All threads destroyed!");
-        
+
 
         const marketState = parserHandler.getMarketState();
         const preparedConfig = parserHandler.getConfigWithLivePrice(marketState);
