@@ -254,7 +254,10 @@ async function _onOrdersNotify(authToken: string, observedOrderId: number, pairD
 		if (success) {
 			await saveAppliedId(matchedApplyTip.id);
 			if (trade_id) {
-				await updateRemaining(trade_id as string, targetAmount.toString());
+				await saveOrderinfo(authToken, observedOrderId, pairData, trade_id).catch(err => {
+					logger.info("Order info saving failed with error, waiting for new notifications:");
+					logger.info(err);
+				});
 			}
 		}
 		return _onOrdersNotify.apply(this, arguments);
@@ -333,13 +336,7 @@ export async function saveOrderinfo(authToken: string, observedOrderId: number, 
 
 export async function onOrdersNotify(authToken: string, observedOrderId: number, pairData: PairData, trade_id: string | null) {
 	try {
-		return await _onOrdersNotify(authToken, observedOrderId, pairData, trade_id).then(async res => {
-			await saveOrderinfo(authToken, observedOrderId, pairData, trade_id).catch(err => {
-				logger.info("Order info saving failed with error, waiting for new notifications:");
-				logger.info(err);
-			});
-			return res;
-		})
+		return await _onOrdersNotify(authToken, observedOrderId, pairData, trade_id);
 	} catch (err) {
 		logger.info("Order notification handler failed with error, waiting for new notifications:");
 		logger.info(err);
