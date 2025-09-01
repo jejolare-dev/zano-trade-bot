@@ -14,7 +14,6 @@ A trading bot for the Zano Trade Dex ([https://trade.zano.org](https://trade.zan
      API_TOKEN=""
      SIMPLEWALLET_PORT="10500"
      ZANOD_URL="http://37.27.100.59:10500"
-     DELETE_ON_START="true"
 
      PRICE_INTERVAL_SEC="10"
      PRICE_SELL_PERCENT="5"

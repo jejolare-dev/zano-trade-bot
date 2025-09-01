@@ -176,79 +176,81 @@ async function _onOrdersNotify(authToken: string, observedOrderId: number, pairD
 		return;
 	}
 
-	logger.detailedInfo("Found matching apply tip:");
-	logger.detailedInfo(matchedApplyTip);
-	logger.detailedInfo("Applying order...");
-
-	const leftDecimal = new Decimal(matchedApplyTip.left);
-	const priceDecimal = new Decimal(matchedApplyTip.price);
-
-	const targetAmount = leftDecimal.greaterThanOrEqualTo(newObservedOrder.left) ?
-		new Decimal(newObservedOrder.left) : leftDecimal;
-
-	const destinationAssetAmount = notationToString(
-		matchedApplyTip.type === "buy" ?
-			targetAmount.mul(priceDecimal).toString() :
-			targetAmount.toString()
-	);
-
-	const currentAssetAmount = notationToString(matchedApplyTip.type === "buy" ?
-		targetAmount.toString() :
-		targetAmount.mul(priceDecimal).toString()
-	);
-
-	const firstCurrencyId = pairData?.first_currency.asset_id;
-	const secondCurrencyId = pairData?.second_currency.asset_id;
-
-	if (!(firstCurrencyId && secondCurrencyId)) {
-		throw new Error("Invalid transaction data received");
-	}
-
-	const destinationAssetID = matchedApplyTip.type === "buy" ? secondCurrencyId : firstCurrencyId;
-	const currentAssetID = matchedApplyTip.type === "buy" ? firstCurrencyId : secondCurrencyId;
-
-	const txData = {
-		destinationAssetID: destinationAssetID,
-		destinationAssetAmount: destinationAssetAmount,
-		currentAssetID: currentAssetID,
-		currentAssetAmount: currentAssetAmount
-	};
-
-	async function saveAppliedId(id: number) {
-
-		logger.detailedInfo("Updating order applies...");
-
-
-		if (trade_id) {
-
-			const prevOrder = await Order.findOne({
-				where: {
-					trade_id: trade_id,
-				}
-			});
-
-			if (!prevOrder) {
-				throw new Error("Order not found in the database");
-			}
-
-			await Order.update(
-				{
-					appliedTo: [...prevOrder?.appliedTo, parseInt(matchedApplyTip.id?.toString(), 10)],
-				},
-				{
-					where: {
-						trade_id: trade_id
-					}
-				}
-			);
-
-			logger.detailedInfo("Order applies updated successfully.");
-		}
-	}
-
 	if (matchedApplyTip.transaction) {
+
+		logger.detailedInfo("Found matching apply tip:");
+		logger.detailedInfo(matchedApplyTip);
+		logger.detailedInfo("Applying order...");
+
+		const leftDecimal = new Decimal(matchedApplyTip.left);
+		const priceDecimal = new Decimal(matchedApplyTip.price);
+
+		const targetAmount = leftDecimal.greaterThanOrEqualTo(newObservedOrder.left) ?
+			new Decimal(newObservedOrder.left) : leftDecimal;
+
+		const destinationAssetAmount = notationToString(
+			matchedApplyTip.type === "buy" ?
+				targetAmount.mul(priceDecimal).toString() :
+				targetAmount.toString()
+		);
+
+		const currentAssetAmount = notationToString(matchedApplyTip.type === "buy" ?
+			targetAmount.toString() :
+			targetAmount.mul(priceDecimal).toString()
+		);
+
+		const firstCurrencyId = pairData?.first_currency.asset_id;
+		const secondCurrencyId = pairData?.second_currency.asset_id;
+
+		if (!(firstCurrencyId && secondCurrencyId)) {
+			throw new Error("Invalid transaction data received");
+		}
+
+		const destinationAssetID = matchedApplyTip.type === "buy" ? secondCurrencyId : firstCurrencyId;
+		const currentAssetID = matchedApplyTip.type === "buy" ? firstCurrencyId : secondCurrencyId;
+
+		const txData = {
+			destinationAssetID: destinationAssetID,
+			destinationAssetAmount: destinationAssetAmount,
+			currentAssetID: currentAssetID,
+			currentAssetAmount: currentAssetAmount
+		};
+
+		async function saveAppliedId(id: number) {
+
+			logger.detailedInfo("Updating order applies...");
+
+
+			if (trade_id) {
+
+				const prevOrder = await Order.findOne({
+					where: {
+						trade_id: trade_id,
+					}
+				});
+
+				if (!prevOrder) {
+					throw new Error("Order not found in the database");
+				}
+
+				await Order.update(
+					{
+						appliedTo: [...prevOrder?.appliedTo, parseInt(matchedApplyTip.id?.toString(), 10)],
+					},
+					{
+						where: {
+							trade_id: trade_id
+						}
+					}
+				);
+
+				logger.detailedInfo("Order applies updated successfully.");
+			}
+		}
+
 		logger.debug("tx data");
 		logger.debug(txData);
+		await new Promise(resolve => setTimeout(resolve, 20000));
 		const success = await _processTransaction(matchedApplyTip.hex_raw_proposal, matchedApplyTip.id, authToken, txData);
 		if (success) {
 			await saveAppliedId(matchedApplyTip.id);
@@ -256,94 +258,6 @@ async function _onOrdersNotify(authToken: string, observedOrderId: number, pairD
 				await updateRemaining(trade_id as string, targetAmount.toString());
 			}
 		}
-		return _onOrdersNotify.apply(this, arguments);
-	} else {
-
-		// return logger.detailedInfo("IGNORING INITIATING SWAP {DEBUGGING}");
-
-
-		const params = {
-			destinationAssetID: destinationAssetID,
-			destinationAssetAmount: destinationAssetAmount,
-			currentAssetID: currentAssetID,
-			currentAssetAmount: currentAssetAmount,
-			destinationAddress: matchedApplyTip.user.address
-		};
-
-		logger.detailedInfo(params);
-
-		const hex = await ZanoWallet.ionicSwap(params).catch(err => {
-			if (err.toString().includes("Insufficient funds")) {
-				return "insufficient_funds"
-			} else {
-				throw err;
-			}
-		});
-
-		if (hex === "insufficient_funds") {
-			logger.detailedInfo("Opponent has insufficient funds, skipping this apply tip.");
-			ordersToIgnore.push(matchedApplyTip.id);
-
-			logger.detailedInfo("Calling onOrdersNotify again in 5 sec, to check there are any more apply tips...");
-			await new Promise(resolve => setTimeout(resolve, 5000));
-
-			return _onOrdersNotify.apply(this, arguments);
-		}
-
-		const result = await FetchUtils.applyOrder(
-			{
-				...matchedApplyTip,
-				hex_raw_proposal: hex
-			},
-			authToken
-		);
-
-		if (!result?.success) {
-			if (result.data === "Invalid order data") {
-				logger.detailedInfo("Probably the order is already applied, fetching the probable application data...");
-
-				let activeTxRes: any;
-				try {
-					activeTxRes = await FetchUtils.getActiveTxByOrdersIds(1, 2, "test");
-				} catch (err) {
-					if (err.code === "ERR_BAD_REQUEST") {
-						activeTxRes = err.response.data;
-					} else {
-						throw err;
-					}
-				}
-				logger.detailedInfo(activeTxRes);
-
-
-				if (activeTxRes?.success && activeTxRes?.data) {
-					logger.detailedInfo("The order is already applied. The active transaction is:");
-					logger.detailedInfo(activeTxRes);
-					logger.detailedInfo("Finalizing the transaction...");
-
-					const activeTx = activeTxRes.data;
-					const processSuccess = await _processTransaction(activeTx.hex_raw_proposal, activeTx.id, authToken, txData);
-
-					if (processSuccess) {
-						await saveAppliedId(matchedApplyTip.id);
-					}
-
-				} else {
-					logger.detailedInfo("The order is not applied, skipping this apply tip.");
-					ordersToIgnore.push(matchedApplyTip.id);
-				}
-			} else {
-				throw new Error("Apply order request responded with an error");
-			}
-		} else {
-
-			if (trade_id) {
-				await updateRemaining(trade_id, targetAmount.toString());
-			}
-			await saveAppliedId(matchedApplyTip.id);
-		}
-
-		logger.detailedInfo("Calling onOrdersNotify again in 5 sec, to check there are any more apply tips...");
-		await new Promise(resolve => setTimeout(resolve, 5000));
 		return _onOrdersNotify.apply(this, arguments);
 	}
 }
@@ -830,7 +744,7 @@ export async function updateRemaining(trade_id: string, spent: string) {
 			trade_id: trade_id
 		}
 	});
-	
+
 	logger.detailedInfo(
 		`Order info saved. Remaining: ${newRemaining?.toString()} for trade_id: ${trade_id} (spent ${spent})`
 	);

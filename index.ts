@@ -19,6 +19,7 @@ export async function thread(configItem: ConfigItemParsed) {
 
     // auth and create/find order
     const { tradeAuthToken } = await auth();
+    await flushOrders(configItem.pairId, tradeAuthToken).catch(e => console.log(e));
 
     logger.detailedInfo("Getting observed order...");
     const observedOrderId = await getObservedOrder(tradeAuthToken, configItem).catch(err => {
