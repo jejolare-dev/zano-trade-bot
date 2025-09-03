@@ -39,7 +39,7 @@ class MexcParser {
             if (!response.price) {
                 throw new Error("Invalid response from market info API");
             }
-            
+
 
             this.marketState.marketPrice = parseFloat(response.price);
             return true;
@@ -47,17 +47,17 @@ class MexcParser {
             console.error('Error fetching market info:', error);
         }
     }
-    
+
 
     private async fetchOrders() {
-    
+
         try {
             const trades = await fetch(this.tradesUrl).then(res => res.json());
-            
+
             if (!trades.bids || !trades.asks) {
                 throw new Error("Invalid response from trades API");
             }
-    
+
             const buyOrders = trades.bids.map(e => ({
                 type: 'buy',
                 price: parseFloat(e[0]),
@@ -70,25 +70,18 @@ class MexcParser {
                 baseVolume: parseFloat(e[1]),
                 baseVolumeUSD: parseFloat(e[1]) * parseFloat(e[0])
             }))
-    
+
             if (
-                !this.marketState.zanoPrice || 
+                !this.marketState.zanoPrice ||
                 !this.marketState.marketPrice
             ) {
                 throw new Error("Failed to calculate target prices");
             }
 
-            // const normolizedBuy = new Decimal(calculatedBuy).div(divider);
-            // const normolizedSell = new Decimal(calculatedSell).div(divider);
-
-            // const reverseDivider = process.env.REVERSE_PAIR ? 
-            //     new Decimal(this.marketState.marketPrice) : 1;
-
-
-            const divider = new Decimal(this.marketState.zanoPrice);
+            const divider = env.PAIR_AGAINST_STABLECOIN ? new Decimal(this.marketState.zanoPrice) : 1;
             const marketPrice = this.marketState.marketPrice;
 
-            const calculatedBuy =  new Decimal(marketPrice).minus(
+            const calculatedBuy = new Decimal(marketPrice).minus(
                 (new Decimal(marketPrice).div(100)).mul(this.config.percentageBuy)
             ).toNumber();
 
@@ -97,23 +90,20 @@ class MexcParser {
             ).toNumber();
 
 
-            const normalizedBuy = new Decimal(calculatedBuy).div(divider).toNumber();
-            const normalizedSell = new Decimal(calculatedSell).div(divider).toNumber();
+            const calculatedBuyInZano = new Decimal(calculatedBuy).div(divider).toNumber();
+            const calculatedSellInZano = new Decimal(calculatedSell).div(divider).toNumber();
 
-            const reverseDivider = process.env.REVERSE_PAIR ? 
-                new Decimal(this.marketState.marketPrice) : 1;
-        
-            this.marketState.buyPrice = new Decimal(normalizedBuy).div(reverseDivider).toNumber();
-            this.marketState.sellPrice = new Decimal(normalizedSell).div(reverseDivider).toNumber();
+            this.marketState.buyPrice = calculatedBuyInZano;
+            this.marketState.sellPrice = calculatedSellInZano;
 
-            const calculatedDepthToBuy = calcDepth(buyOrders, 'buy', calculatedBuy, this.marketState.zanoPrice);
-            const calculatedDepthToSell = calcDepth(sellOrders, 'sell', calculatedSell, this.marketState.zanoPrice);
+            const calculatedDepthToBuy = calcDepth(buyOrders, 'buy', calculatedBuy);
+            const calculatedDepthToSell = calcDepth(sellOrders, 'sell', calculatedSell);
 
-            const normalizedDepthToBuy = new Decimal(calculatedDepthToBuy).div(divider).toNumber();
-            const normalizedDepthToSell = new Decimal(calculatedDepthToSell).div(divider).toNumber();
+            const depthToBuyInZano = new Decimal(calculatedDepthToBuy).div(divider).toNumber();
+            const depthToSellInZano = new Decimal(calculatedDepthToSell).div(divider).toNumber();
 
-            this.marketState.depthToBuy = new Decimal(normalizedDepthToBuy).div(reverseDivider).toNumber();
-            this.marketState.depthToSell = new Decimal(normalizedDepthToSell).div(reverseDivider).toNumber();
+            this.marketState.depthToBuy = new Decimal(depthToBuyInZano).toNumber();
+            this.marketState.depthToSell = new Decimal(depthToSellInZano).toNumber();
 
             return true;
         } catch (error) {
@@ -128,13 +118,13 @@ class MexcParser {
                 await this.fetchMarketInfo(),
                 await this.fetchOrders(),
             ]
-            
+
             if (!promiseList.every(e => e)) {
                 throw new Error("Failed to fetch market data");
             }
 
             this.marketState.updatedAt = +new Date();
-            
+
         } catch (error) {
             console.error(error);
             console.log("ERROR WHILE FETCHING MEXC MARKET DATA");

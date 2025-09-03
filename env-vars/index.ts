@@ -111,8 +111,6 @@ if (!allowedParserTypes.includes(PARSER_TYPE) && PARSER_ENABLED) {
 //     throw new Error("MEXC_CLIENT and MEXC_SECRET must be specified in .env file when PARSER_TYPE is mexc");
 // }
 
-export const REVERSE_PAIR = process.env.REVERSE_PAIR === "true";
-
 export const PRICE_INTERVAL_SEC = parseInt(process.env.PRICE_INTERVAL_SEC || "10", 10);
 export const PRICE_SELL_PERCENT = parseInt(process.env.PRICE_SELL_PERCENT || "10", 10);
 export const PRICE_BUY_PERCENT = parseInt(process.env.PRICE_BUY_PERCENT || "10", 10);

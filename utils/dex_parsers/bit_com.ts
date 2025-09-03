@@ -81,13 +81,6 @@ class BitComParser {
                 throw new Error("Failed to calculate target prices");
             }
 
-            // const normolizedBuy = new Decimal(calculatedBuy).div(divider);
-            // const normolizedSell = new Decimal(calculatedSell).div(divider);
-
-            // const reverseDivider = process.env.REVERSE_PAIR ? 
-            //     new Decimal(this.marketState.marketPrice) : 1;
-
-
             const divider = env.PAIR_AGAINST_STABLECOIN ? new Decimal(this.marketState.zanoPrice) : 1;
             const marketPrice = this.marketState.marketPrice;
 
