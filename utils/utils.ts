@@ -758,6 +758,18 @@ export async function flushOrders(pairId: number, authToken: string) {
 	}
 }
 
+export async function flushOrdersForConfigItem(authToken: string, configItem: ConfigItemParsed) {
+	const existingOrdersList = await FetchUtils.getUserOrdersPage(authToken, configItem.pairId);
+	const existingOrders = existingOrdersList?.data?.orders || [];
+
+	const toDelete = existingOrders.filter(order => order.type === configItem.type);
+
+	for (const existingOrder of toDelete) {
+		logger.detailedInfo("Deleting existing order...");
+		await FetchUtils.deleteOrder(authToken, existingOrder.id);
+	}
+}
+
 export function trimDecimalToLength(str: string, maxLength: number = 21) {
 	if (str.length <= maxLength) return str;
 	const [intPart, decPart = ''] = str.split(".");

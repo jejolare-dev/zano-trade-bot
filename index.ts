@@ -1,7 +1,7 @@
 import * as env from "./env-vars";
 
 import logger from "./logger";
-import { auth, flushOrders, getObservedOrder, getPairData, onOrdersNotify, prepareDatabaseStructure, prepareThreadSocket, startActivityChecker, startThreadsFromConfig, syncDatabaseWithConfig, threadRestartChecker } from "./utils/utils";
+import { auth, flushOrders, flushOrdersForConfigItem, getObservedOrder, getPairData, onOrdersNotify, prepareDatabaseStructure, prepareThreadSocket, startActivityChecker, startThreadsFromConfig, syncDatabaseWithConfig, threadRestartChecker } from "./utils/utils";
 import { ConfigItemParsed } from "./interfaces/common/Config";
 import sequelize from "./database/database";
 import { addActiveThread, state } from "./utils/states";
@@ -20,7 +20,7 @@ export async function thread(configItem: ConfigItemParsed) {
 
     // auth and create/find order
     const { tradeAuthToken } = await auth();
-    await flushOrders(configItem.pairId, tradeAuthToken).catch(e => console.log(e));
+    await flushOrdersForConfigItem(tradeAuthToken, configItem).catch(e => console.log(e));
 
     logger.detailedInfo("Getting observed order...");
     const observedOrderId = await getObservedOrder(tradeAuthToken, configItem).catch(err => {
@@ -79,37 +79,40 @@ async function startWithParser(configItem: ConfigItemParsed) {
     await parserHandler.init();
 
     const marketState = parserHandler.getMarketState();
-    const preparedConfig = parserHandler.getConfigWithLivePrice(marketState, configItem);
+    parserHandler.getConfigWithLivePrice(marketState, configItem);
 
     async function updateConfig() {
+        try {
+            logger.detailedInfo("Destroying threads...");
 
-        logger.detailedInfo("Destroying threads...");
+            const cachedActiveThreads = JSON.parse(JSON.stringify(state.activeThreads.map(e => ({
+                id: e.id
+            }))));
 
-        const cachedActiveThreads = JSON.parse(JSON.stringify(state.activeThreads.map(e => ({
-            id: e.id
-        }))));
+            for (const thread of cachedActiveThreads) {
+                logger.warn(`Destroying thread ${thread.id}...`);
+                destroyThread(thread.id);
+            }
 
-        for (const thread of cachedActiveThreads) {
-            logger.warn(`Destroying thread ${thread.id}...`);
-            destroyThread(thread.id);
+            logger.info("All threads destroyed!");
+
+
+            const marketState = parserHandler.getMarketState();
+            const preparedConfig = parserHandler.getConfigWithLivePrice(marketState, configItem);
+
+            if (!preparedConfig) {
+                logger.error("Prepared config is false, not starting threads.");
+                return;
+            }
+
+            const { tradeAuthToken } = await auth();
+
+            await flushOrdersForConfigItem(tradeAuthToken, configItem,);
+
+            await startThreadsFromConfig([preparedConfig]);
+        } catch (error) {
+            console.log(error);
         }
-
-        logger.info("All threads destroyed!");
-
-
-        const marketState = parserHandler.getMarketState();
-        const preparedConfig = parserHandler.getConfigWithLivePrice(marketState, configItem);
-
-        if (!preparedConfig) {
-            logger.error("Prepared config is false, not starting threads.");
-            return;
-        }
-
-        const { tradeAuthToken } = await auth();
-
-        await flushOrders(preparedConfig.pairId, tradeAuthToken);
-
-        await startThreadsFromConfig([preparedConfig]);
     }
 
     parserHandler.setPriceChangeListener(updateConfig, configItem);
