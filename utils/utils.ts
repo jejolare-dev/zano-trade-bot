@@ -156,12 +156,8 @@ async function _onOrdersNotify(authToken: string, observedOrderId: number, pairD
 		return tipMatches;
 	});
 
-	console.log('matchedApplyTipArray', matchedApplyTipArray);
-	console.log('orderstoignore', ordersToIgnore);
-	
-
 	const matchedApplyTip = matchedApplyTipArray
-		.filter(e => !ordersToIgnore.includes(e.id))
+		.filter(e => !ordersToIgnore.includes(e.id) && matchedApplyTip.transaction && matchedApplyTip.hex_raw_proposal)
 		.reduce((prev: any, current) => {
 			if (newObservedOrder.type === "buy") {
 				if (prev?.price && new Decimal(prev?.price).lessThanOrEqualTo(current.price)) {
