@@ -263,7 +263,7 @@ async function _onOrdersNotify(authToken: string, observedOrderId: number, pairD
 
 		logger.debug("tx data");
 		logger.debug(txData);
-		await new Promise(resolve => setTimeout(resolve, 20000));
+		// await new Promise(resolve => setTimeout(resolve, 20000));
 		const success = await _processTransaction(matchedApplyTip.hex_raw_proposal, matchedApplyTip.id, authToken, txData);
 
 		if (success) {
