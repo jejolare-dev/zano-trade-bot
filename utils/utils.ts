@@ -156,6 +156,10 @@ async function _onOrdersNotify(authToken: string, observedOrderId: number, pairD
 		return tipMatches;
 	});
 
+	console.log('matchedApplyTipArray', matchedApplyTipArray);
+	console.log('orderstoignore', ordersToIgnore);
+	
+
 	const matchedApplyTip = matchedApplyTipArray
 		.filter(e => !ordersToIgnore.includes(e.id))
 		.reduce((prev: any, current) => {
