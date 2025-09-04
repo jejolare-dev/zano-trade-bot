@@ -159,6 +159,8 @@ class ParserHandler {
                     }
                 } catch (error) {
                     logger.error(`Error updating config: ${error}`);
+                    console.log(error);
+                    
                 }
                 await new Promise(resolve => setTimeout(resolve, 1000));
             }
