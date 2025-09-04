@@ -12,6 +12,8 @@ import SocketClient from "./socket";
 import AuthParams from "../interfaces/fetch-utils/AuthParams";
 import { thread } from "..";
 import { fetchZanod } from "./walletUtils";
+import Settings from "../schemes/Settings";
+import telegramHandler from "./telegramHandler";
 
 export const ordersToIgnore = [] as number[];
 
@@ -185,20 +187,6 @@ async function _onOrdersNotify(authToken: string, observedOrderId: number, pairD
 		const leftDecimal = new Decimal(matchedApplyTip.left);
 		const priceDecimal = new Decimal(matchedApplyTip.price);
 
-		const targetAmount = leftDecimal.greaterThanOrEqualTo(newObservedOrder.left) ?
-			new Decimal(newObservedOrder.left) : leftDecimal;
-
-		const destinationAssetAmount = notationToString(
-			matchedApplyTip.type === "buy" ?
-				targetAmount.mul(priceDecimal).toString() :
-				targetAmount.toString()
-		);
-
-		const currentAssetAmount = notationToString(matchedApplyTip.type === "buy" ?
-			targetAmount.toString() :
-			targetAmount.mul(priceDecimal).toString()
-		);
-
 		const firstCurrencyId = pairData?.first_currency.asset_id;
 		const secondCurrencyId = pairData?.second_currency.asset_id;
 
@@ -208,6 +196,31 @@ async function _onOrdersNotify(authToken: string, observedOrderId: number, pairD
 
 		const destinationAssetID = matchedApplyTip.type === "buy" ? secondCurrencyId : firstCurrencyId;
 		const currentAssetID = matchedApplyTip.type === "buy" ? firstCurrencyId : secondCurrencyId;
+
+		const destinationDP = (await ZanoWallet.getAsset(destinationAssetID))?.decimal_point;
+
+		const currentDP = (await ZanoWallet.getAsset(currentAssetID))?.decimal_point;
+
+		if (Number.isNaN(destinationDP) || Number.isNaN(currentDP)) {
+			throw new Error("Invalid decimal point data received");
+		}
+		
+
+		const targetAmount = leftDecimal.greaterThanOrEqualTo(newObservedOrder.left) ?
+			new Decimal(newObservedOrder.left) : leftDecimal;
+
+		const destinationAssetAmount = notationToString(
+			matchedApplyTip.type === "buy" ?
+				targetAmount.mul(priceDecimal).toDecimalPlaces(destinationDP, Decimal.ROUND_DOWN).toString() :
+				targetAmount.toString()
+		);
+
+		const currentAssetAmount = notationToString(matchedApplyTip.type === "buy" ?
+			targetAmount.toString() :
+			targetAmount.mul(priceDecimal).toDecimalPlaces(currentDP, Decimal.ROUND_DOWN).toString()
+		);
+
+
 
 		const txData = {
 			destinationAssetID: destinationAssetID,
@@ -250,8 +263,13 @@ async function _onOrdersNotify(authToken: string, observedOrderId: number, pairD
 
 		logger.debug("tx data");
 		logger.debug(txData);
+		await new Promise(resolve => setTimeout(resolve, 20000));
 		const success = await _processTransaction(matchedApplyTip.hex_raw_proposal, matchedApplyTip.id, authToken, txData);
+
 		if (success) {
+			telegramHandler.notify(
+				`${matchedApplyTip.type === "buy" ? 'Bought' : 'Sold'} ${matchedApplyTip.amount} of $${pairData.first_currency.asset_info?.ticker}`
+			)
 			await saveAppliedId(matchedApplyTip.id);
 			if (trade_id) {
 				await saveOrderinfo(authToken, observedOrderId, pairData, trade_id).catch(err => {
@@ -647,6 +665,18 @@ export async function threadRestartChecker(currentThread: ActiveThread, threadFu
 			await new Promise(resolve => setTimeout(resolve, 1000));
 		}
 	})();
+}
+
+
+export async function prepareDatabaseStructure() {
+	if (!(await Settings.findOne({ where: { id: 1 } }))) {
+		await Settings.create({
+			id: 1,
+			settings: {
+				telegram_targets: []
+			}
+		});
+	};
 }
 
 

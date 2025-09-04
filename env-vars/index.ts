@@ -118,6 +118,17 @@ export const PRICE_CHANGE_SENSITIVITY_PERCENT = parseFloat(process.env.PRICE_CHA
 export const DEPTH_CHANGE_SENSITIVITY_PERCENT = parseFloat(process.env.DEPTH_CHANGE_SENSITIVITY_PERCENT || "10");
 export const ACTIVITY_PING_INTERVAL = parseInt(process.env.ACTIVITY_PING_INTERVAL || "15", 10) * 1000; // in ms
 
+export const TELEGRAM_BOT_TOKEN = process.env.TELEGRAM_BOT_TOKEN as string | undefined;
+export const TELEGRAM_ADMIN_USERNAME = process.env.TELEGRAM_ADMIN_USERNAME as string | undefined;
+
+if (TELEGRAM_BOT_TOKEN && !TELEGRAM_ADMIN_USERNAME) {
+    throw new Error("TELEGRAM_ADMIN_USERNAME must be specified in .env file when TELEGRAM_BOT_TOKEN is set");
+}
+
+if (TELEGRAM_ADMIN_USERNAME && !TELEGRAM_BOT_TOKEN) {
+    throw new Error("TELEGRAM_BOT_TOKEN must be specified in .env file when TELEGRAM_ADMIN_USERNAME is set");
+}
+
 export const FIRST_CURRENCY = process.env.FIRST_CURRENCY as string;
 export const SECOND_CURRENCY = process.env.SECOND_CURRENCY as string;
 

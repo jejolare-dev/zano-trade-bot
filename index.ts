@@ -1,13 +1,14 @@
 import * as env from "./env-vars";
 
 import logger from "./logger";
-import { auth, flushOrders, getObservedOrder, getPairData, onOrdersNotify, prepareThreadSocket, startActivityChecker, startThreadsFromConfig, syncDatabaseWithConfig, threadRestartChecker } from "./utils/utils";
+import { auth, flushOrders, getObservedOrder, getPairData, onOrdersNotify, prepareDatabaseStructure, prepareThreadSocket, startActivityChecker, startThreadsFromConfig, syncDatabaseWithConfig, threadRestartChecker } from "./utils/utils";
 import { ConfigItemParsed } from "./interfaces/common/Config";
 import sequelize from "./database/database";
 import { addActiveThread, state } from "./utils/states";
 import { NotificationParams } from "./interfaces/common/Common";
 import { destroyThread } from "./utils/utils";
 import ParserHandler from "./utils/dex_parsers/parserHandler";
+import telegramHandler from "./utils/telegramHandler";
 
 export async function thread(configItem: ConfigItemParsed) {
 
@@ -74,7 +75,7 @@ async function startWithParser() {
     const preparedConfig = parserHandler.getConfigWithLivePrice(marketState);
 
     console.log(marketState, preparedConfig);
-    
+
     async function updateConfig() {
 
         logger.detailedInfo("Destroying threads...");
@@ -109,9 +110,14 @@ async function startWithParser() {
 (async () => {
 
     await sequelize.sync({});
+    await prepareDatabaseStructure();
+    await syncDatabaseWithConfig();
     logger.detailedInfo("Database synced!");
 
-    await syncDatabaseWithConfig();
+    if (env.TELEGRAM_BOT_TOKEN) {
+        await telegramHandler.init();
+    }
+
 
     if (env.PARSER_ENABLED) {
         await startWithParser();

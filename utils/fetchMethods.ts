@@ -105,7 +105,10 @@ export class FetchUtils {
             {
                 id: id
             }
-        ).then(res => res.data);
+        ).then(res => res.data).catch(e => {
+            console.log('error while fetching activity checker');
+            
+        })
     }
 
     // to maintain "instant" badge on order.
