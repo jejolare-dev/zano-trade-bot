@@ -25,8 +25,8 @@ class BitComParser {
 
     constructor(config: ParserConfig) {
         this.config = config;
-        this.marketInfoUrl = `https://api.mexc.com/api/v3/avgPrice?symbol=${config.firstCurrency}${config.secondCurrency}`;
-        this.tradesUrl = `https://api.mexc.com/api/v3/depth?symbol=${config.firstCurrency}${config.secondCurrency}&limit=5000`;
+        this.marketInfoUrl = `https://api.bit.com/um/v1/index_price?currency=${config.firstCurrency}&quote_currency=${config.secondCurrency}`;
+        this.tradesUrl = `https://api.bit.com/spot/v1/orderbooks?pair=${config.firstCurrency}-${config.secondCurrency}&level=50`;
     }
 
 
@@ -58,6 +58,9 @@ class BitComParser {
 
         try {
             const trades = await fetch(this.tradesUrl).then(res => res.json()).then(r => r?.data);
+
+            console.log(trades, this.tradesUrl);
+            
 
             if (!trades.bids || !trades.asks) {
                 throw new Error("Invalid response from trades API");
