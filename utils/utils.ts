@@ -471,6 +471,8 @@ export async function getObservedOrder(authToken: string, configItem: ConfigItem
 		creationParams
 	);
 
+	console.log('createRes', createRes);
+	
 
 	if (!createRes?.success) {
 		throw new Error("Error: order creation request responded with an error: " + createRes.data);
