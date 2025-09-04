@@ -78,13 +78,72 @@ export const readConfig: ConfigParsed = (() => {
 
             const trade_id = item.trade_id || null;
 
+            const PRICE_INTERVAL_SEC = parseInt(item.parser_config?.PRICE_INTERVAL_SEC || "10", 10);
+            const PRICE_SELL_PERCENT = parseInt(item.parser_config?.PRICE_SELL_PERCENT || "10", 10);
+            const PRICE_BUY_PERCENT = parseInt(item.parser_config?.PRICE_BUY_PERCENT || "10", 10);
+            const PRICE_CHANGE_SENSITIVITY_PERCENT = parseFloat(item.parser_config?.PRICE_CHANGE_SENSITIVITY_PERCENT || "1");
+            const DEPTH_CHANGE_SENSITIVITY_PERCENT = parseFloat(item.parser_config?.DEPTH_CHANGE_SENSITIVITY_PERCENT || "10");
+
+            const FIRST_CURRENCY = item.parser_config?.FIRST_CURRENCY as string;
+            const SECOND_CURRENCY = item.parser_config?.SECOND_CURRENCY as string;
+
+            const PAIR_AGAINST_STABLECOIN = item.parser_config?.PAIR_AGAINST_STABLECOIN === "true";
+
+
+            const PARSER_ENABLED = !!item.parser_config;
+            const PARSER_TYPE = (item.parser_config?.PARSER_TYPE || "mexc") as ParserType;
+
+
+            if (!allowedParserTypes.includes(PARSER_TYPE) && PARSER_ENABLED) {
+                throw new Error(`PARSER_TYPE must be one of ${allowedParserTypes.join(", ")}`);
+            }
+
+
+            if (PARSER_ENABLED) {
+
+                if (!FIRST_CURRENCY || !SECOND_CURRENCY) {
+                    throw new Error("FIRST_CURRENCY and SECOND_CURRENCY must be specified in config if parser enabled");
+                }
+
+
+                const requiredNumbers = [
+                    PRICE_INTERVAL_SEC,
+                    PRICE_SELL_PERCENT,
+                    PRICE_BUY_PERCENT,
+                    PRICE_CHANGE_SENSITIVITY_PERCENT,
+                    DEPTH_CHANGE_SENSITIVITY_PERCENT,
+                ];
+
+                if (requiredNumbers.some(e => isNaN(e))) {
+                    throw new Error(
+                        `One of the following config fields is not a number: 
+                        PRICE_INTERVAL_SEC, 
+                        PRICE_SELL_PERCENT, 
+                        PRICE_BUY_PERCENT, 
+                        PRICE_CHANGE_SENSITIVITY_PERCENT, 
+                        DEPTH_CHANGE_SENSITIVITY_PERCENT
+                        `
+                    );
+                }
+            }
 
             return {
                 pairId: parsedPairUrl,
                 amount: parsedAmount,
                 price: parsedPrice,
                 type: parsedType,
-                trade_id
+                trade_id,
+                parser_config: PARSER_ENABLED ? {
+                    PARSER_TYPE: PARSER_TYPE,
+                    PRICE_INTERVAL_SEC: PRICE_INTERVAL_SEC,
+                    PRICE_SELL_PERCENT: PRICE_SELL_PERCENT,
+                    PRICE_BUY_PERCENT: PRICE_BUY_PERCENT,
+                    PRICE_CHANGE_SENSITIVITY_PERCENT: PRICE_CHANGE_SENSITIVITY_PERCENT,
+                    DEPTH_CHANGE_SENSITIVITY_PERCENT: DEPTH_CHANGE_SENSITIVITY_PERCENT,
+                    FIRST_CURRENCY: FIRST_CURRENCY,
+                    SECOND_CURRENCY: SECOND_CURRENCY,
+                    PAIR_AGAINST_STABLECOIN: PAIR_AGAINST_STABLECOIN,
+                } : undefined,
             };
         });
 
@@ -96,28 +155,7 @@ export const readConfig: ConfigParsed = (() => {
     }
 })();
 
-
-export const PARSER_ENABLED = process.env.PARSER_ENABLED === "true";
-export const PARSER_TYPE = (process.env.PARSER_TYPE || "xeggex") as ParserType;
-
-if (!allowedParserTypes.includes(PARSER_TYPE) && PARSER_ENABLED) {
-    throw new Error(`PARSER_TYPE must be one of ${allowedParserTypes.join(", ")}`);
-}
-
-// export const MEXC_CLIENT = process.env.MEXC_CLIENT as string;
-// export const MEXC_SECRET = process.env.MEXC_SECRET as string;
-
-// if (PARSER_TYPE === "mexc" && (!MEXC_CLIENT || !MEXC_SECRET)) {
-//     throw new Error("MEXC_CLIENT and MEXC_SECRET must be specified in .env file when PARSER_TYPE is mexc");
-// }
-
-export const PRICE_INTERVAL_SEC = parseInt(process.env.PRICE_INTERVAL_SEC || "10", 10);
-export const PRICE_SELL_PERCENT = parseInt(process.env.PRICE_SELL_PERCENT || "10", 10);
-export const PRICE_BUY_PERCENT = parseInt(process.env.PRICE_BUY_PERCENT || "10", 10);
-export const PRICE_CHANGE_SENSITIVITY_PERCENT = parseFloat(process.env.PRICE_CHANGE_SENSITIVITY_PERCENT || "1");
-export const DEPTH_CHANGE_SENSITIVITY_PERCENT = parseFloat(process.env.DEPTH_CHANGE_SENSITIVITY_PERCENT || "10");
-export const ACTIVITY_PING_INTERVAL = parseInt(process.env.ACTIVITY_PING_INTERVAL || "15", 10) * 1000; // in ms
-
+export const ACTIVITY_PING_INTERVAL = parseInt(process.env.ACTIVITY_PING_INTERVAL || "15", 10) * 1000;
 export const TELEGRAM_BOT_TOKEN = process.env.TELEGRAM_BOT_TOKEN as string | undefined;
 export const TELEGRAM_ADMIN_USERNAME = process.env.TELEGRAM_ADMIN_USERNAME as string | undefined;
 
@@ -127,31 +165,4 @@ if (TELEGRAM_BOT_TOKEN && !TELEGRAM_ADMIN_USERNAME) {
 
 if (TELEGRAM_ADMIN_USERNAME && !TELEGRAM_BOT_TOKEN) {
     throw new Error("TELEGRAM_BOT_TOKEN must be specified in .env file when TELEGRAM_ADMIN_USERNAME is set");
-}
-
-export const FIRST_CURRENCY = process.env.FIRST_CURRENCY as string;
-export const SECOND_CURRENCY = process.env.SECOND_CURRENCY as string;
-
-export const PAIR_AGAINST_STABLECOIN = process.env.PAIR_AGAINST_STABLECOIN === "true";
-
-if (PARSER_ENABLED) {
-
-    if (!FIRST_CURRENCY || !SECOND_CURRENCY) {
-        throw new Error("FIRST_CURRENCY and SECOND_CURRENCY must be specified in .env file");
-    }
-
-
-    const requiredNumbers = [
-        PRICE_INTERVAL_SEC,
-        PRICE_SELL_PERCENT,
-        PRICE_BUY_PERCENT,
-        PRICE_CHANGE_SENSITIVITY_PERCENT,
-        DEPTH_CHANGE_SENSITIVITY_PERCENT,
-    ];
-
-    if (requiredNumbers.some(e => isNaN(e))) {
-        throw new Error(
-            "PRICE_INTERVAL_SEC, PRICE_SELL_PERCENT, PRICE_BUY_PERCENT must be specified in .env file"
-        );
-    }
 }

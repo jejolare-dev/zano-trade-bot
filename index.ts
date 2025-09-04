@@ -47,7 +47,10 @@ export async function thread(configItem: ConfigItemParsed) {
     // get pair data
     logger.detailedInfo("Fetching trading pair data...");
     const pairData = await getPairData(configItem.pairId);
-    const notificationParams: NotificationParams = [tradeAuthToken, observedOrderId, pairData, configItem.trade_id];
+    const notificationParams: NotificationParams = [
+        tradeAuthToken, observedOrderId, pairData, configItem.trade_id,
+        configItem
+    ];
 
 
 
@@ -63,18 +66,20 @@ export async function thread(configItem: ConfigItemParsed) {
     logger.info("Bot started.");
 }
 
-async function startWithParser() {
+async function startWithParser(configItem: ConfigItemParsed) {
+
+    if (!configItem.parser_config) {
+        throw new Error("Parser config is missing in parser start (unexpected).");
+    }
 
     const parserHandler = new ParserHandler({
-        type: env.PARSER_TYPE
+        config: configItem.parser_config
     });
 
     await parserHandler.init();
 
     const marketState = parserHandler.getMarketState();
-    const preparedConfig = parserHandler.getConfigWithLivePrice(marketState);
-
-    console.log(marketState, preparedConfig);
+    const preparedConfig = parserHandler.getConfigWithLivePrice(marketState, configItem);
 
     async function updateConfig() {
 
@@ -93,18 +98,21 @@ async function startWithParser() {
 
 
         const marketState = parserHandler.getMarketState();
-        const preparedConfig = parserHandler.getConfigWithLivePrice(marketState);
+        const preparedConfig = parserHandler.getConfigWithLivePrice(marketState, configItem);
+
+        if (!preparedConfig) {
+            logger.error("Prepared config is false, not starting threads.");
+            return;
+        }
 
         const { tradeAuthToken } = await auth();
 
-        for (const element of preparedConfig) {
-            await flushOrders(element.pairId, tradeAuthToken);
-        }
+        await flushOrders(preparedConfig.pairId, tradeAuthToken);
 
-        await startThreadsFromConfig(preparedConfig);
+        await startThreadsFromConfig([preparedConfig]);
     }
 
-    parserHandler.setPriceChangeListener(updateConfig);
+    parserHandler.setPriceChangeListener(updateConfig, configItem);
 }
 
 (async () => {
@@ -118,11 +126,15 @@ async function startWithParser() {
         await telegramHandler.init();
     }
 
+    const configWithParser = env.readConfig.filter(e => e.parser_config);
+    const configWithoutParser = env.readConfig.filter(e => !e.parser_config);
 
-    if (env.PARSER_ENABLED) {
-        await startWithParser();
-    } else {
-        await startThreadsFromConfig(env.readConfig);
+    if (configWithoutParser.length > 0) {
+        await startThreadsFromConfig(configWithoutParser);
+    }
+
+    for (const element of configWithParser) {
+        startWithParser(element);
     }
 
 })();

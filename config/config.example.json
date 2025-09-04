@@ -4,6 +4,17 @@
         "amount": "1",
         "price": "2132131",
         "type": "SELL",
-        "trade_id": "cfkigj37t0efoidsueq908eowidc8a98p"
+        "trade_id": "cfkigj37t0efoidsueq908eowidc8a98p",
+        "parser_config": {
+            "PRICE_INTERVAL_SEC": "10",
+            "PRICE_SELL_PERCENT": "5",
+            "PRICE_BUY_PERCENT": "5",
+            "PRICE_CHANGE_SENSITIVITY_PERCENT": "3",
+            "DEPTH_CHANGE_SENSITIVITY_PERCENT": "20",
+            "PARSER_TYPE": "mexc",
+            "PAIR_AGAINST_STABLECOIN": "true",
+            "FIRST_CURRENCY": "FUSD",
+            "SECOND_CURRENCY": "USDT"
+        }
     }
 ]

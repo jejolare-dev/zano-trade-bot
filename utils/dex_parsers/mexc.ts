@@ -9,8 +9,8 @@ class MexcParser {
 
     private zanoPriceUrl = 'https://api.mexc.com/api/v3/avgPrice?symbol=ZANOUSDT';
 
-    private marketInfoUrl = `https://api.mexc.com/api/v3/avgPrice?symbol=${env.FIRST_CURRENCY}${env.SECOND_CURRENCY}`;
-    private tradesUrl = `https://api.mexc.com/api/v3/depth?symbol=${env.FIRST_CURRENCY}${env.SECOND_CURRENCY}&limit=5000`;
+    private marketInfoUrl: string;
+    private tradesUrl: string;
     private config: ParserConfig;
 
     private marketState: MarketState = {
@@ -25,6 +25,8 @@ class MexcParser {
 
     constructor(config: ParserConfig) {
         this.config = config;
+        this.marketInfoUrl = `https://api.mexc.com/api/v3/avgPrice?symbol=${config.firstCurrency}${config.secondCurrency}`;
+        this.tradesUrl = `https://api.mexc.com/api/v3/depth?symbol=${config.firstCurrency}${config.secondCurrency}&limit=5000`;
     }
 
 
@@ -78,7 +80,7 @@ class MexcParser {
                 throw new Error("Failed to calculate target prices");
             }
 
-            const divider = env.PAIR_AGAINST_STABLECOIN ? new Decimal(this.marketState.zanoPrice) : 1;
+            const divider = this.config.pairAgainstStablecoin ? new Decimal(this.marketState.zanoPrice) : 1;
             const marketPrice = this.marketState.marketPrice;
 
             const calculatedBuy = new Decimal(marketPrice).minus(
@@ -171,13 +173,5 @@ class MexcParser {
     }
 }
 
-export { MexcParser };
 
-const mexcParser = new MexcParser({
-    fetchInterval: env.PRICE_INTERVAL_SEC,
-    percentageSell: env.PRICE_SELL_PERCENT,
-    percentageBuy: env.PRICE_BUY_PERCENT
-});
-
-
-export default mexcParser;
+export default MexcParser;

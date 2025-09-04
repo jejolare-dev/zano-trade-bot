@@ -1,10 +1,12 @@
+import { ConfigItemParsed, ParserConfigPrepared } from "./Config";
 import PairData from "./PairData";
 
 export type NotificationParams = [
     string,
     number,
     PairData,
-    string | null
+    string | null,
+    ConfigItemParsed
 ];
 export interface PriceInfo {
     buy: number | null;
@@ -17,7 +19,7 @@ export type ParserType = 'mexc' | 'bitcom';
 export const allowedParserTypes: ParserType[] = ['mexc', 'bitcom'];
 
 export interface ParserHandlerProps {
-    type: ParserType;
+    config: ParserConfigPrepared;
 }
 
 export interface MarketState {

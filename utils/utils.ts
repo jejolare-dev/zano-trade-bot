@@ -100,7 +100,7 @@ async function _processTransaction(hex: string, txId: number, authToken: string,
 	return true;
 }
 
-async function _onOrdersNotify(authToken: string, observedOrderId: number, pairData: PairData, trade_id: string | null) {
+async function _onOrdersNotify(authToken: string, observedOrderId: number, pairData: PairData, trade_id: string | null, configItem: ConfigItemParsed) {
 	logger.detailedInfo("Started    onOrdersNotify.");
 	logger.detailedInfo("Fetching user orders page...");
 	const response = await FetchUtils.getUserOrdersPage(authToken, parseInt(pairData.id, 10));
@@ -267,12 +267,15 @@ async function _onOrdersNotify(authToken: string, observedOrderId: number, pairD
 		const success = await _processTransaction(matchedApplyTip.hex_raw_proposal, matchedApplyTip.id, authToken, txData);
 
 		if (success) {
+
+			const amountEmployed = matchedApplyTip.type === "buy" ? destinationAssetAmount : currentAssetAmount;
+
 			telegramHandler.notify(
-				`${matchedApplyTip.type === "buy" ? 'Bought' : 'Sold'} ${matchedApplyTip.amount} of $${pairData.first_currency.asset_info?.ticker}`
+				`${matchedApplyTip.type === "buy" ? 'Bought' : 'Sold'} ${amountEmployed} of $${pairData.first_currency.asset_info?.ticker}`
 			)
 			await saveAppliedId(matchedApplyTip.id);
 			if (trade_id) {
-				await saveOrderinfo(authToken, observedOrderId, pairData, trade_id).catch(err => {
+				await saveOrderinfo(authToken, observedOrderId, pairData, trade_id, configItem).catch(err => {
 					logger.info("Order info saving failed with error, waiting for new notifications:");
 					logger.info(err);
 				});
@@ -282,7 +285,13 @@ async function _onOrdersNotify(authToken: string, observedOrderId: number, pairD
 	}
 }
 
-export async function saveOrderinfo(authToken: string, observedOrderId: number, pairData: PairData, trade_id: string | null) {
+export async function saveOrderinfo(
+	authToken: string, 
+	observedOrderId: number, 
+	pairData: PairData, 
+	trade_id: string | null,
+	configItem: ConfigItemParsed
+) {
 
 	if (!trade_id) {
 		return;
@@ -303,7 +312,7 @@ export async function saveOrderinfo(authToken: string, observedOrderId: number, 
 	const newObservedOrder = orders.find(e => e.id === observedOrderId);
 
 
-	if (!env.PARSER_ENABLED) {
+	if (!configItem.parser_config) {
 
 		logger.detailedInfo(`New Remaining amount: ${newObservedOrder?.left || ("0 *order complited*")} for trade_id: ${trade_id}`);
 		console.log('newObservedOrder', newObservedOrder);
@@ -352,9 +361,15 @@ export async function saveOrderinfo(authToken: string, observedOrderId: number, 
 	}
 }
 
-export async function onOrdersNotify(authToken: string, observedOrderId: number, pairData: PairData, trade_id: string | null) {
+export async function onOrdersNotify(
+	authToken: string, 
+	observedOrderId: number, 
+	pairData: PairData, 
+	trade_id: string | null,
+	configItem: ConfigItemParsed
+) {
 	try {
-		return await _onOrdersNotify(authToken, observedOrderId, pairData, trade_id);
+		return await _onOrdersNotify(authToken, observedOrderId, pairData, trade_id, configItem);
 	} catch (err) {
 		logger.info("Order notification handler failed with error, waiting for new notifications:");
 		logger.info(err);
@@ -414,7 +429,7 @@ export async function getObservedOrder(authToken: string, configItem: ConfigItem
 	}
 
 	function reduceDepthBySensitivityPercent(depth: number) {
-		const sensitivityMultiplier = (100 - env.DEPTH_CHANGE_SENSITIVITY_PERCENT) / 100;
+		const sensitivityMultiplier = (100 - (configItem.parser_config?.DEPTH_CHANGE_SENSITIVITY_PERCENT || 0)) / 100;
 		return depth * sensitivityMultiplier;
 	}
 
@@ -429,7 +444,7 @@ export async function getObservedOrder(authToken: string, configItem: ConfigItem
 	const orderAmount = Decimal.min(maxAmountCoin, maxDepthAmountCoin);
 
 	const targetAmount = trimDecimalToLength(
-		env.PARSER_ENABLED ? orderAmount.toFixed(asset_dp) : maxAmountCoin.toFixed(asset_dp)
+		!!configItem.parser_config ? orderAmount.toFixed(asset_dp) : maxAmountCoin.toFixed(asset_dp)
 	);
 
 	const targetPrice = configItem.price.toFixed(asset_dp);
@@ -695,7 +710,7 @@ export async function syncDatabaseWithConfig() {
 		const elementPairid = element.pair_url?.split("/").at(-1);
 
 		if (
-			(!element.price.equals(configItem.price) && !env.PARSER_ENABLED) ||
+			(!element.price.equals(configItem.price) && !configItem?.parser_config) ||
 			(!elementPairid || parseInt(elementPairid, 10) !== configItem.pairId)
 			|| !element.amount.equals(configItem.amount)
 		) {

@@ -1,20 +1,23 @@
 import Decimal from "decimal.js";
 import * as env from "../../env-vars";
 import logger from "../../logger";
-import { ConfigItemParsed } from "../../interfaces/common/Config";
+import { ConfigItemParsed, ParserConfigPrepared } from "../../interfaces/common/Config";
 import { MarketState, ParserHandlerProps, ParserType, PriceInfo } from "../../interfaces/common/Common";
-import mexcParser, { MexcParser } from "./mexc";
-import bitComParser, { BitComParser } from "./bit_com";
+import MexcParser from "./mexc";
+import BitComParser from "./bit_com";
 
 export interface ParserConfig {
     fetchInterval: number;
     percentageSell: number;
     percentageBuy: number;
+    firstCurrency: string;
+    secondCurrency: string;
+    pairAgainstStablecoin: boolean;
 }
 
 class ParserHandler {
 
-    private parserType: ParserType;
+    private parserConfig: ParserConfigPrepared;
     private targetParser: MexcParser | BitComParser;
     private lastPriceInfo: PriceInfo = {
         buy: null,
@@ -24,17 +27,30 @@ class ParserHandler {
     }
 
     constructor(props: ParserHandlerProps) {
-        this.parserType = props.type;
-        if (this.parserType === 'mexc') {
+        this.parserConfig = props.config;
+
+        const parserParams = {
+            fetchInterval: this.parserConfig.PRICE_INTERVAL_SEC,
+            percentageSell: this.parserConfig.PRICE_SELL_PERCENT,
+            percentageBuy: this.parserConfig.PRICE_BUY_PERCENT,
+            firstCurrency: this.parserConfig.FIRST_CURRENCY,
+            secondCurrency: this.parserConfig.SECOND_CURRENCY,
+            pairAgainstStablecoin: this.parserConfig.PAIR_AGAINST_STABLECOIN,
+        }
+
+        if (this.parserConfig.PARSER_TYPE === 'mexc') {
+            const mexcParser = new MexcParser(parserParams);
             this.targetParser = mexcParser;
         }
 
-        if (this.parserType === 'bitcom') {
+        if (this.parserConfig.PARSER_TYPE === 'bitcom') {
+            const bitComParser = new BitComParser(parserParams);
+            
             this.targetParser = bitComParser;
         }
 
         if (!this.targetParser) {
-            throw new Error(`Parser not found for type: ${this.parserType}`);
+            throw new Error(`Parser not found for type: ${this.parserConfig.PARSER_TYPE}`);
         }
     }
 
@@ -46,74 +62,79 @@ class ParserHandler {
         return this.targetParser.getMarketState();
     }
 
-    getConfigWithLivePrice(marketState: MarketState) {
-        const preparedConfig = env.readConfig.map((item: ConfigItemParsed) => {
-            const newPrice = item.type === "buy" ? marketState.buyPrice : marketState.sellPrice;
+    getConfigWithLivePrice(marketState: MarketState, item: ConfigItemParsed) {
 
-            const updatedAt = marketState.updatedAt || 0;
+        if (!item.parser_config) {
+            throw new Error("Parser config is missing in getConfigWithLivePrice (unexpected).");
+        }
 
-            if (updatedAt + (env.PRICE_INTERVAL_SEC * 1000 * 3) < +new Date()) {
-                logger.error(`Price for pair ${item.pairId} is outdated. Skipping...`);
-                return false;
-            }
+        const newPrice = item.type === "buy" ? marketState.buyPrice : marketState.sellPrice;
 
-            if (!newPrice) {
-                logger.error(`Price for pair ${item.pairId} is not available. Skipping...`);
-                return false;
-            }
+        const updatedAt = marketState.updatedAt || 0;
 
-            return {
-                ...item,
-                price: new Decimal(newPrice),
-                marketState: this.getMarketState(),
-            }
-        }).filter(e => !!e);
+        if (updatedAt + (item.parser_config.PRICE_INTERVAL_SEC * 1000 * 3) < +new Date()) {
+            logger.error(`Price for pair ${item.pairId} is outdated. Skipping...`);
+            return false;
+        }
 
-        return preparedConfig;
+        if (!newPrice) {
+            logger.error(`Price for pair ${item.pairId} is not available. Skipping...`);
+            return false;
+        }
+
+        return {
+            ...item,
+            price: new Decimal(newPrice),
+            marketState: this.getMarketState(),
+        }
     }
 
-    setPriceChangeListener(callback: (priceInfo: PriceInfo) => Promise<any>) {
-	    // function supposed to be async, we shouldn't wait for this loop
+    setPriceChangeListener(callback: (priceInfo: PriceInfo) => Promise<any>, configItem: ConfigItemParsed) {
+        // function supposed to be async, we shouldn't wait for this loop
+
         (async () => {
             while (true) {
                 try {
                     const marketState = this.getMarketState();
-    
+
                     if (!marketState.buyPrice || !marketState.sellPrice || !marketState.depthToSell || !marketState.depthToBuy) {
                         throw new Error("Price or depth is not available yet.");
                     }
-    
+
                     if (
-                        !this.lastPriceInfo.buy || 
-                        !this.lastPriceInfo.sell || 
-                        !this.lastPriceInfo.depthToSell || 
+                        !this.lastPriceInfo.buy ||
+                        !this.lastPriceInfo.sell ||
+                        !this.lastPriceInfo.depthToSell ||
                         !this.lastPriceInfo.depthToBuy
                     ) {
-    
+
                         this.lastPriceInfo = {
                             buy: marketState.buyPrice,
                             sell: marketState.sellPrice,
                             depthToSell: marketState.depthToSell,
                             depthToBuy: marketState.depthToBuy,
                         }
-    
+
                         await callback(this.lastPriceInfo);
-    
+
                         continue;
                     }
-    
-    
+
+                    if (!configItem.parser_config) {
+                        throw new Error("Parser config is missing in setPriceChangeListener (unexpected).");
+                    }
+
                     const buyPriceChangePercent = Math.abs((marketState.buyPrice - this.lastPriceInfo.buy) / this.lastPriceInfo.buy) * 100;
                     const sellPriceChangePercent = Math.abs((marketState.sellPrice - this.lastPriceInfo.sell) / this.lastPriceInfo.sell) * 100;
 
                     const buyDepthChangePercent = Math.abs((marketState.depthToBuy - this.lastPriceInfo.depthToBuy) / this.lastPriceInfo.depthToBuy) * 100;
                     const sellDepthChangePercent = Math.abs((marketState.depthToSell - this.lastPriceInfo.depthToSell) / this.lastPriceInfo.depthToSell) * 100;
-    
+
                     if (
-                        buyPriceChangePercent > env.PRICE_CHANGE_SENSITIVITY_PERCENT ||
-                        sellPriceChangePercent > env.PRICE_CHANGE_SENSITIVITY_PERCENT ||
-                        buyDepthChangePercent > env.DEPTH_CHANGE_SENSITIVITY_PERCENT ||
-                        sellDepthChangePercent > env.DEPTH_CHANGE_SENSITIVITY_PERCENT
+                        buyPriceChangePercent > configItem.parser_config.PRICE_CHANGE_SENSITIVITY_PERCENT ||
+                        sellPriceChangePercent > configItem.parser_config.PRICE_CHANGE_SENSITIVITY_PERCENT ||
+                        buyDepthChangePercent > configItem.parser_config.DEPTH_CHANGE_SENSITIVITY_PERCENT ||
+                        sellDepthChangePercent > configItem.parser_config.DEPTH_CHANGE_SENSITIVITY_PERCENT
                     ) {
                         logger.detailedInfo(`
                             Price or depth change detected: 
@@ -124,21 +145,21 @@ class ParserHandler {
                             depthToSell ${sellDepthChangePercent.toFixed(2)}%
                             `
                         );
-    
+
                         this.lastPriceInfo = {
                             buy: marketState.buyPrice,
                             sell: marketState.sellPrice,
                             depthToSell: marketState.depthToSell,
                             depthToBuy: marketState.depthToBuy,
                         }
-    
+
                         await callback(this.lastPriceInfo);
-    
-    
+
+
                     }
                 } catch (error) {
                     logger.error(`Error updating config: ${error}`);
-                } 
+                }
                 await new Promise(resolve => setTimeout(resolve, 1000));
             }
         })();
