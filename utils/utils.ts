@@ -268,10 +268,12 @@ async function _onOrdersNotify(authToken: string, observedOrderId: number, pairD
 
 		if (success) {
 
-			const amountEmployed = matchedApplyTip.type === "buy" ? destinationAssetAmount : currentAssetAmount;
+			const amountZanoEmployed = matchedApplyTip.type === "buy" ? destinationAssetAmount : currentAssetAmount;
+
+			const amountAssetEmployed = matchedApplyTip.type === "buy" ? currentAssetAmount : destinationAssetAmount;
 
 			telegramHandler.notify(
-				`${matchedApplyTip.type === "buy" ? 'Sold' : 'Bought'} $${pairData.first_currency.asset_info?.ticker} for ${amountEmployed} Zano`
+				`${matchedApplyTip.type === "buy" ? 'Sold' : 'Bought'} ${amountAssetEmployed} of $${pairData.first_currency.asset_info?.ticker} for ${amountZanoEmployed} Zano`
 			)
 			await saveAppliedId(matchedApplyTip.id);
 			if (trade_id) {
