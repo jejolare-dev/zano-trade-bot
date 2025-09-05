@@ -57,7 +57,10 @@ class BitComParser {
     private async fetchOrders() {
 
         try {
-            const trades = await fetch(this.tradesUrl).then(res => res.json()).then(r => r?.data);
+            const trades = await fetch(this.tradesUrl).then(res => res.json()).then(r => r?.data).catch(e => {
+                console.log(e);
+                
+            });
 
             if (!trades.bids || !trades.asks) {
                 throw new Error("Invalid response from trades API");
