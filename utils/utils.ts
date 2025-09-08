@@ -14,6 +14,7 @@ import { thread } from "..";
 import { fetchZanod } from "./walletUtils";
 import Settings from "../schemes/Settings";
 import telegramHandler from "./telegramHandler";
+import sha256 from "sha256";
 
 export const ordersToIgnore = [] as number[];
 
@@ -657,6 +658,18 @@ export function destroyThread(id: string) {
 	}
 }
 
+export function getConfigItemID(configItem: ConfigItemParsed) {
+	const configString = `
+		${configItem.pairId}
+		${configItem.amount}
+		${configItem.price.toString()}
+		${configItem.type}
+		${configItem.trade_id}
+		${!!configItem.parser_config}
+	`;
+
+	return sha256(configString);
+}
 
 export async function threadRestartChecker(currentThread: ActiveThread, threadFunction: any) {
 	// function supposed to be async, we shouldn't wait for this loop

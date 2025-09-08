@@ -1,7 +1,7 @@
 import * as env from "./env-vars";
 
 import logger from "./logger";
-import { auth, flushOrders, flushOrdersForConfigItem, getObservedOrder, getPairData, onOrdersNotify, prepareDatabaseStructure, prepareThreadSocket, startActivityChecker, startThreadsFromConfig, syncDatabaseWithConfig, threadRestartChecker } from "./utils/utils";
+import { auth, flushOrdersForConfigItem, getConfigItemID, getObservedOrder, getPairData, onOrdersNotify, prepareDatabaseStructure, prepareThreadSocket, startActivityChecker, startThreadsFromConfig, syncDatabaseWithConfig, threadRestartChecker } from "./utils/utils";
 import { ConfigItemParsed } from "./interfaces/common/Config";
 import sequelize from "./database/database";
 import { addActiveThread, state } from "./utils/states";
@@ -14,9 +14,15 @@ export async function thread(configItem: ConfigItemParsed) {
 
     // connect socket
     const { socketClient, activeThreadData } = await prepareThreadSocket();
-    addActiveThread(activeThreadData)
 
-    logger.info(`Starting thread with id ${activeThreadData.id}...`);
+    const preparedThreadData = {
+        ...activeThreadData,
+        threadID: getConfigItemID(configItem)
+    };
+
+    addActiveThread(preparedThreadData)
+
+    logger.info(`Starting thread with id ${preparedThreadData.id}...`);
 
     // auth and create/find order
     const { tradeAuthToken } = await auth();
@@ -38,8 +44,8 @@ export async function thread(configItem: ConfigItemParsed) {
 
 
     // continuously ping trade server and check for disconnects
-    startActivityChecker(activeThreadData, observedOrderId, tradeAuthToken);
-    threadRestartChecker(activeThreadData, () => {
+    startActivityChecker(preparedThreadData, observedOrderId, tradeAuthToken);
+    threadRestartChecker(preparedThreadData, () => {
         thread(configItem);
     });
 
@@ -60,7 +66,7 @@ export async function thread(configItem: ConfigItemParsed) {
     await socketClient.setSocketListeners(
         configItem,
         notificationParams,
-        activeThreadData
+        preparedThreadData
     );
 
     logger.info("Bot started.");
@@ -86,8 +92,9 @@ async function startWithParser(configItem: ConfigItemParsed) {
             logger.detailedInfo("Destroying threads...");
 
             const cachedActiveThreads = JSON.parse(JSON.stringify(state.activeThreads.map(e => ({
-                id: e.id
-            }))));
+                id: e.id,
+                threadID: e.threadID
+            })))).filter(e => e.threadID === getConfigItemID(configItem));
 
             for (const thread of cachedActiveThreads) {
                 logger.warn(`Destroying thread ${thread.id}...`);
@@ -107,7 +114,7 @@ async function startWithParser(configItem: ConfigItemParsed) {
 
             const { tradeAuthToken } = await auth();
 
-            await flushOrdersForConfigItem(tradeAuthToken, configItem,);
+            await flushOrdersForConfigItem(tradeAuthToken, configItem);
 
             await startThreadsFromConfig([preparedConfig]);
         } catch (error) {

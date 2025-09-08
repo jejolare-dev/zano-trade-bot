@@ -9,7 +9,8 @@ export const state: State = {
 export const addActiveThread = (thread: ActiveThread) => {
     state.activeThreads.push({
         socket: thread.socket,
-        id: thread.id
+        id: thread.id,
+        threadID: thread.threadID
     });
 }
 
@@ -17,7 +18,8 @@ export const queueThreadToRestart = (thread: ActiveThread) => {
     if (!state.threadsToRestart.find(t => t.id === thread.id)) {
         state.threadsToRestart.push({
             socket: thread.socket,
-            id: thread.id
+            id: thread.id,
+            threadID: thread.threadID
         });
     }
 }
