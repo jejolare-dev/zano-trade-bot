@@ -1,19 +1,19 @@
 [
     {
         "pair_url": "https://trade.zano.org/dex/trading/107",
-        "amount": "1",
-        "price": "2132131",
+        "amount": "50000",
+        "price": "0.0000000000000001",
         "type": "SELL",
-        "trade_id": "cfkigj37t0efoidsueq908eowidc8a98p",
+        "trade_id": "nhgyuikjg",
         "parser_config": {
             "PRICE_INTERVAL_SEC": "10",
             "PRICE_SELL_PERCENT": "5",
             "PRICE_BUY_PERCENT": "5",
-            "PRICE_CHANGE_SENSITIVITY_PERCENT": "3",
+            "PRICE_CHANGE_SENSITIVITY_PERCENT": "2",
             "DEPTH_CHANGE_SENSITIVITY_PERCENT": "20",
-            "PARSER_TYPE": "mexc",
+            "PARSER_TYPE": "bitcom",
             "PAIR_AGAINST_STABLECOIN": "true",
-            "FIRST_CURRENCY": "FUSD",
+            "FIRST_CURRENCY": "BANDIT",
             "SECOND_CURRENCY": "USDT"
         }
     }

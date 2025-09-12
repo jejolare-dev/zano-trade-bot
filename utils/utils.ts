@@ -188,6 +188,8 @@ async function _onOrdersNotify(authToken: string, observedOrderId: number, pairD
 		const leftDecimal = new Decimal(matchedApplyTip.left);
 		const priceDecimal = new Decimal(matchedApplyTip.price);
 
+		const ourPrice = new Decimal(newObservedOrder.price);
+
 		const firstCurrencyId = pairData?.first_currency.asset_id;
 		const secondCurrencyId = pairData?.second_currency.asset_id;
 
@@ -212,13 +214,13 @@ async function _onOrdersNotify(authToken: string, observedOrderId: number, pairD
 
 		const destinationAssetAmount = notationToString(
 			matchedApplyTip.type === "buy" ?
-				targetAmount.mul(priceDecimal).toDecimalPlaces(destinationDP, Decimal.ROUND_DOWN).toString() :
+				targetAmount.mul(ourPrice).toDecimalPlaces(destinationDP, Decimal.ROUND_DOWN).toString() :
 				targetAmount.toString()
 		);
 
 		const currentAssetAmount = notationToString(matchedApplyTip.type === "buy" ?
 			targetAmount.toString() :
-			targetAmount.mul(priceDecimal).toDecimalPlaces(currentDP, Decimal.ROUND_DOWN).toString()
+			targetAmount.mul(ourPrice).toDecimalPlaces(currentDP, Decimal.ROUND_DOWN).toString()
 		);
 
 
