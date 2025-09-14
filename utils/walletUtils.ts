@@ -2,7 +2,7 @@ import * as env from "../env-vars";
 import forge from "node-forge";
 import logger from "../logger";
 
-function createJWSToken(payload, secrete_str) {
+function createJWSToken(payload: object, secrete_str: string) {
     const header = { alg: 'HS256', typ: 'JWT' };
     const encodedHeader = Buffer.from(JSON.stringify(header)).toString('base64').replace(/=/g, '');
     const encodedPayload = Buffer.from(JSON.stringify(payload)).toString('base64').replace(/=/g, '');
@@ -15,13 +15,13 @@ function createJWSToken(payload, secrete_str) {
     return `${encodedHeader}.${encodedPayload}.${encodedSignature}`;
 }
 
-function generateRandomString(length) {
+function generateRandomString(length: number): string {
     const bytes = forge.random.getBytesSync(Math.ceil(length / 2));
     const hexString = forge.util.bytesToHex(bytes);
     return hexString.substring(0, length);
 }
 
-function generateAccessToken(httpBody) {
+function generateAccessToken(httpBody: string): string {
     // Calculate the SHA-256 hash of the HTTP body
     const md = forge.md.sha256.create();
     md.update(httpBody);
@@ -38,7 +38,7 @@ function generateAccessToken(httpBody) {
     return createJWSToken(payload, env.API_TOKEN);
 }
 
-export const fetchData = async (method, params = {}) => {
+export const fetchData = async (method: string, params = {}) => {
 
     const httpBody = JSON.stringify({
         jsonrpc: "2.0",
@@ -60,7 +60,7 @@ export const fetchData = async (method, params = {}) => {
     });
 }
 
-export const fetchZanod = async (method, params = {}) => {
+export const fetchZanod = async (method: string, params = {}) => {
     
         const httpBody = JSON.stringify({
             jsonrpc: "2.0",

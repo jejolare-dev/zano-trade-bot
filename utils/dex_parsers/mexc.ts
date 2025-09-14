@@ -60,13 +60,13 @@ class MexcParser {
                 throw new Error("Invalid response from trades API");
             }
 
-            const buyOrders = trades.bids.map(e => ({
+            const buyOrders = trades.bids.map((e: [string, string]) => ({
                 type: 'buy',
                 price: parseFloat(e[0]),
                 baseVolume: parseFloat(e[1]),
                 baseVolumeUSD: parseFloat(e[1]) * parseFloat(e[0])
             }))
-            const sellOrders = trades.asks.map(e => ({
+            const sellOrders = trades.asks.map((e: [string, string]) => ({
                 type: 'sell',
                 price: parseFloat(e[0]),
                 baseVolume: parseFloat(e[1]),

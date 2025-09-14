@@ -41,17 +41,14 @@ class ParserHandler {
         if (this.parserConfig.PARSER_TYPE === 'mexc') {
             const mexcParser = new MexcParser(parserParams);
             this.targetParser = mexcParser;
-        }
-
-        if (this.parserConfig.PARSER_TYPE === 'bitcom') {
+        } else if (this.parserConfig.PARSER_TYPE === 'bitcom') {
             const bitComParser = new BitComParser(parserParams);
-            
-            this.targetParser = bitComParser;
-        }
 
-        if (!this.targetParser) {
+            this.targetParser = bitComParser;
+        } else {
             throw new Error(`Parser not found for type: ${this.parserConfig.PARSER_TYPE}`);
         }
+
     }
 
     async init() {
@@ -160,7 +157,7 @@ class ParserHandler {
                 } catch (error) {
                     logger.error(`Error updating config: ${error}`);
                     console.log(error);
-                    
+
                 }
                 await new Promise(resolve => setTimeout(resolve, 1000));
             }

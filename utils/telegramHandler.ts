@@ -5,11 +5,12 @@ import Settings from "../schemes/Settings";
 class TelegramHandler {
 
     private bot: Telegraf;
-    private adminUsername: string;
+    private adminUsername: string = '';
 
     constructor() {
 
         if (!env.TELEGRAM_BOT_TOKEN || !env.TELEGRAM_ADMIN_USERNAME) {
+            this.bot = new Telegraf('').catch(() => {}); // Dummy bot for ts
             return;
         }
 

@@ -8,7 +8,7 @@ import { NotificationParams } from "../interfaces/common/Common";
 import { ActiveThread } from "../interfaces/common/State";
 
 export default class SocketClient {
-    private socket: Socket;
+    private socket: Socket | null = null;
 
     async initSocket() {
         return new Promise<Socket>((resolve) => {
@@ -36,25 +36,25 @@ export default class SocketClient {
         activeThreadData: ActiveThread,
     ) {
         logger.detailedInfo("Subscribing to Zano Trade WS events...");
-        this.socket.emit("in-trading", { id: configItem.pairId });
+        this.socket?.emit("in-trading", { id: configItem.pairId });
 
-        this.socket.on("new-order", async () => {
+        this.socket?.on("new-order", async () => {
             logger.info(`New order message incoming via WS, starting order notification handler...`);
             await onOrdersNotify(...notificationParams);
         });
 
-        this.socket.on("delete-order", async () => {
+        this.socket?.on("delete-order", async () => {
             console.log("DELETE ORDER", notificationParams);
             logger.info(`Order deleted message incoming via WS (${activeThreadData.id}), starting order notification handler...`);
             await onOrdersNotify(...notificationParams);
         });
-
-        this.socket.on("update-orders", async () => {
+        
+        this.socket?.on("update-orders", async () => {
             logger.info(`Orders update message incoming via WS, starting order notification handler...`);
             await onOrdersNotify(...notificationParams);
         });
-        
-        this.socket.on("disconnect", async (reason) => {
+
+        this.socket?.on("disconnect", async (reason) => {
             logger.warn(`Socket disconnected: ${reason}`);
 
             const threadActive = checkThreadActivity(activeThreadData);

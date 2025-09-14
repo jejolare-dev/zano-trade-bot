@@ -32,8 +32,8 @@ async function _processTransaction(hex: string, txId: number, authToken: string,
 
 	const info = await ZanoWallet.getSwapInfo(hex);
 
-	const receivingAssetData = info.proposal.to_finalizer.find(e => e.asset_id === txData.destinationAssetID);
-	const sendingAssetData = info.proposal.to_initiator.find(e => e.asset_id === txData.currentAssetID);
+	const receivingAssetData = info.proposal.to_finalizer.find((e: { asset_id: string }) => e.asset_id === txData.destinationAssetID);
+	const sendingAssetData = info.proposal.to_initiator.find((e: { asset_id: string }) => e.asset_id === txData.currentAssetID);
 
 
 	if (!receivingAssetData || !sendingAssetData) {
@@ -101,7 +101,7 @@ async function _processTransaction(hex: string, txId: number, authToken: string,
 	return true;
 }
 
-async function _onOrdersNotify(authToken: string, observedOrderId: number, pairData: PairData, trade_id: string | null, configItem: ConfigItemParsed) {
+async function _onOrdersNotify(authToken: string, observedOrderId: number, pairData: PairData, trade_id: string | null, configItem: ConfigItemParsed): Promise<void> {
 	logger.detailedInfo("Started    onOrdersNotify.");
 	logger.detailedInfo("Fetching user orders page...");
 	const response = await FetchUtils.getUserOrdersPage(authToken, parseInt(pairData.id, 10));
@@ -286,6 +286,7 @@ async function _onOrdersNotify(authToken: string, observedOrderId: number, pairD
 				});
 			}
 		}
+		// @ts-ignore
 		return _onOrdersNotify.apply(this, arguments);
 	}
 }
@@ -584,7 +585,7 @@ export const prepareThreadSocket = async () => {
 	const socketClient = new SocketClient();
 	let socket = await socketClient.initSocket();
 
-	const socketID = socketClient.getSocket().id;
+	const socketID = socketClient.getSocket()?.id;
 
 	if (!socketID) {
 		throw new Error("Socket initialization failed, socket ID is not available.");
@@ -647,8 +648,8 @@ export function destroyThread(id: string) {
 	if (thread) {
 		try {
 			deleteActiveThread(thread);
-			thread.socket.getSocket().disconnect();
-			thread.socket.getSocket().removeAllListeners();
+			thread.socket?.getSocket()?.disconnect();
+			thread.socket?.getSocket()?.removeAllListeners();
 			logger.info(`Thread ${thread.id} destroyed [destroyThread()]`);
 		} catch (error) {
 			logger.error(`Failed to destroy thread ${thread.id}: ${error}`);
@@ -765,15 +766,15 @@ export function toFixedDecimalNumber(value: number | string, decimalPlaces: numb
 	return parseFloat(new Decimal(value).toFixed(decimalPlaces));
 }
 
-export async function flushOrders(pairId: number, authToken: string) {
-	const existingOrdersList = await FetchUtils.getUserOrdersPage(authToken, pairId);
-	const existingOrders = existingOrdersList?.data?.orders || [];
+// export async function flushOrders(pairId: number, authToken: string) {
+// 	const existingOrdersList = await FetchUtils.getUserOrdersPage(authToken, pairId);
+// 	const existingOrders = existingOrdersList?.data?.orders || [];
 
-	for (const existingOrder of existingOrders) {
-		logger.detailedInfo("Deleting existing order...");
-		await FetchUtils.deleteOrder(authToken, existingOrder.id);
-	}
-}
+// 	for (const existingOrder of existingOrders) {
+// 		logger.detailedInfo("Deleting existing order...");
+// 		await FetchUtils.deleteOrder(authToken, existingOrder.id);
+// 	}
+// }
 
 export async function flushOrdersForConfigItem(authToken: string, configItem: ConfigItemParsed) {
 	const existingOrdersList = await FetchUtils.getUserOrdersPage(authToken, configItem.pairId);
