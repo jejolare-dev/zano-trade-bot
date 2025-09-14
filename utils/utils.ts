@@ -561,8 +561,7 @@ export const startActivityChecker = (currentThread: ActiveThread, observedOrderI
 
 				await FetchUtils.pingActivityChecker(observedOrderId, tradeAuthToken)
 			} catch (error) {
-				console.log(error);
-				logger.error(`Failed to ping activity checker: ${error}`);
+				logger.error(`Failed to ping activity checker: ${error}, ${JSON.stringify(currentThread)}`);
 
 				const threadActive = checkThreadActivity(currentThread);
 				if (!threadActive) {
