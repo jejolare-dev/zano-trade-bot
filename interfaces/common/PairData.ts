@@ -1,4 +1,4 @@
-import CurrencyRow from "./CurrencyRow.ts";
+import CurrencyRow from './CurrencyRow.ts';
 
 interface PairData {
     id: string;

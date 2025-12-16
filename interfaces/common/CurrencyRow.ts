@@ -1,4 +1,4 @@
-import CurrencyType from "./CurrencyType.ts";
+import CurrencyType from './CurrencyType.ts';
 
 export interface Asset {
     asset_id: string;

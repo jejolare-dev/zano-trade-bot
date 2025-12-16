@@ -1,3 +1,3 @@
-type Side = "limit" | "market";
+type Side = 'limit' | 'market';
 
 export default Side;

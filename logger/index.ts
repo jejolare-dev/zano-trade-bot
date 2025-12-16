@@ -1,17 +1,17 @@
+import pino from 'pino';
 import * as env from '../env-vars';
-import pino from "pino";
 
 const logger = pino({
-    level: env.DISABLE_INFO_LOGS ? "info" : "detailedInfo",
+    level: env.DISABLE_INFO_LOGS ? 'info' : 'detailedInfo',
     customLevels: {
         detailedInfo: 25,
     },
     transport: {
-        target: "pino-pretty",
+        target: 'pino-pretty',
         options: {
-            colorize: true
-        }
-    }
+            colorize: true,
+        },
+    },
 });
 
 export default logger;

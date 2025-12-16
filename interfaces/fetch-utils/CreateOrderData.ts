@@ -1,5 +1,5 @@
-import OfferType from "../../interfaces/common/OfferType";
-import Side from "../../interfaces/common/Side";
+import OfferType from '../common/OfferType';
+import Side from '../common/Side';
 
 interface CreateOrderData {
     type: OfferType;
