@@ -1,13 +1,16 @@
 module.exports = {
-  // Or 'jejolare/backend' for Node.js app
-  extends: ['jejolare/backend'],
+    // Or 'jejolare/backend' for Node.js app
+    extends: ['jejolare/backend'],
 
-  // This is needed only if you use TypeScript
-  settings: {
-    'import/resolver': {
-      typescript: {
-        project: './tsconfig.json',
-      },
+    // This is needed only if you use TypeScript
+    settings: {
+        'import/resolver': {
+            typescript: {
+                project: './tsconfig.json',
+            },
+        },
     },
-  },
+    rules: {
+        'import/no-extraneous-dependencies': ['error', { devDependencies: true }],
+    },
 };
