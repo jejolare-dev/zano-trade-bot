@@ -21,6 +21,7 @@
     "incremental": true,
     "isolatedModules": true,
     "baseUrl": "./",
+    "allowImportingTsExtensions": true
   },
   "include": [
     "**/*",
