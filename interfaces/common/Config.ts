@@ -1,4 +1,4 @@
-import OfferType from "./OfferType";
+import OfferType from './OfferType';
 
 export interface ConfigItem {
     pair_url: string;

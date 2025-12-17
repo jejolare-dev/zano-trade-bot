@@ -35,5 +35,5 @@ export interface UserPageData {
             hex_raw_proposal: string;
             isInstant: boolean;
         }[];
-    }
+    };
 }

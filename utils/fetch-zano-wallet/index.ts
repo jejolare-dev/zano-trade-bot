@@ -1,11 +1,13 @@
-import * as env from "../../env-vars";
-import forge from "node-forge";
-import logger from "../../logger";
+import forge from 'node-forge';
+import * as env from '../../env-vars';
+import logger from '../../logger';
 
 function createJWSToken(payload, secrete_str) {
     const header = { alg: 'HS256', typ: 'JWT' };
     const encodedHeader = Buffer.from(JSON.stringify(header)).toString('base64').replace(/=/g, '');
-    const encodedPayload = Buffer.from(JSON.stringify(payload)).toString('base64').replace(/=/g, '');
+    const encodedPayload = Buffer.from(JSON.stringify(payload))
+        .toString('base64')
+        .replace(/=/g, '');
 
     const signature = forge.hmac.create();
     signature.start('sha256', secrete_str);
@@ -32,49 +34,46 @@ function generateAccessToken(httpBody) {
         body_hash: bodyHash,
         user: 'zano_trade_app',
         salt: generateRandomString(64),
-        exp: Math.floor(Date.now() / 1000) + (60), // Expires in 1 minute
+        exp: Math.floor(Date.now() / 1000) + 60, // Expires in 1 minute
     };
 
     return createJWSToken(payload, env.API_TOKEN);
 }
 
 export const fetchData = async (method, params = {}) => {
-
     const httpBody = JSON.stringify({
-        jsonrpc: "2.0",
-        id: "0",
+        jsonrpc: '2.0',
+        id: '0',
         method,
         params,
     });
-    
+
     logger.detailedInfo(httpBody);
-    
 
     return fetch(`http://127.0.0.1:${env.SIMPLEWALLET_PORT || 11211}/json_rpc`, {
-        method: "POST",
+        method: 'POST',
         headers: {
-            "Content-Type": "application/json",
-            "Zano-Access-Token": generateAccessToken(httpBody),
+            'Content-Type': 'application/json',
+            'Zano-Access-Token': generateAccessToken(httpBody),
         },
         body: httpBody,
     });
-}
+};
 
 export const fetchZanod = async (method, params = {}) => {
-    
-        const httpBody = JSON.stringify({
-            jsonrpc: "2.0",
-            id: "0",
-            method,
-            params,
-        });
-    
-        return fetch(`${env.ZANOD_URL}/json_rpc`, {
-            method: "POST",
-            headers: {
-                "Content-Type": "application/json",
-                "Zano-Access-Token": generateAccessToken(httpBody),
-            },
-            body: httpBody,
-        });
-}
+    const httpBody = JSON.stringify({
+        jsonrpc: '2.0',
+        id: '0',
+        method,
+        params,
+    });
+
+    return fetch(`${env.ZANOD_URL}/json_rpc`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'Zano-Access-Token': generateAccessToken(httpBody),
+        },
+        body: httpBody,
+    });
+};

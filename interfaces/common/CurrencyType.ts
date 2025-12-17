@@ -1,3 +1,3 @@
-type CurrencyType = "fiat" | "crypto" | "deposit";
+type CurrencyType = 'fiat' | 'crypto' | 'deposit';
 
 export default CurrencyType;
