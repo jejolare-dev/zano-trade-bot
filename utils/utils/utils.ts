@@ -107,7 +107,7 @@ async function _processTransaction(hex: string, txId: number, authToken: string,
         await new Promise((resolve) => setTimeout(resolve, 5000));
 
         // eslint-disable-next-line prefer-rest-params
-        return _onOrdersNotify.apply(this, arguments);
+        return _onOrdersNotify(...arguments);
     }
 
     const result = await FetchUtils.confirmTransaction(txId, authToken);
@@ -271,7 +271,7 @@ async function _onOrdersNotify(
             );
             await new Promise((resolve) => setTimeout(resolve, 5000));
 
-            return _onOrdersNotify.apply(this, [authToken, observedOrderId, pairData]);
+            return _onOrdersNotify(authToken, observedOrderId, pairData);
         }
 
         const result = await FetchUtils.applyOrder(
@@ -292,7 +292,8 @@ async function _onOrdersNotify(
                 let activeTxRes: any;
                 try {
                     activeTxRes = await FetchUtils.getActiveTxByOrdersIds(1, 2, 'test');
-                } catch (err) {
+                    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                } catch (err: any) {
                     if (err.code === 'ERR_BAD_REQUEST') {
                         activeTxRes = err.response.data;
                     } else {
@@ -326,7 +327,7 @@ async function _onOrdersNotify(
             'Calling onOrdersNotify again in 5 sec, to check there are any more apply tips...',
         );
         await new Promise((resolve) => setTimeout(resolve, 5000));
-        return _onOrdersNotify.apply(this, [authToken, observedOrderId, pairData]);
+        return _onOrdersNotify(authToken, observedOrderId, pairData);
     }
 
     logger.detailedInfo('Order applied successfully.');
