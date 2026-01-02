@@ -3,7 +3,7 @@ import * as env from '../env-vars';
 import logger from '../logger';
 
 export default class SocketClient {
-    private socket: Socket;
+    private socket?: Socket;
 
     async initSocket() {
         return new Promise<Socket>((resolve) => {
